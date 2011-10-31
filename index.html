@@ -18,9 +18,8 @@
   <div id="notify">Enable Desktop Notifications</div>
 
   <script type="text/template" id="counter-template">
-    <%= formattedTime %>
-    <div class="action"><%= clickAction %></div>
+    <%= minutes + ":" + ((seconds < 10) ? "0" : "") + seconds %>
+    <div class="action"><%= paused ? "resume" : "pause" %></div>
   </script>
 </body>
-
 </html>

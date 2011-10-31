@@ -44,6 +44,7 @@ var Pomodoro = Backbone.Model.extend({
       return true;
     }
   }
+
 });
 
 var Ticker = function(pomodoro) {
@@ -97,13 +98,12 @@ var PomodoroCounterView = Backbone.View.extend({
   },
 
   render: function() {
-    var minutes = Math.floor(this.model.get("seconds")/60);
-    var seconds = this.model.get("seconds")%60;
 
     $(this.el).html(this.template({
-      formattedTime: minutes + ":" + ((seconds < 10) ? "0" : "") + seconds,
-      clickAction: (this.ticker.paused ? "resume" : "pause")
-    }))
+      minutes: Math.floor(this.model.get("seconds") / 60),
+      seconds: Math.floor(this.model.get("seconds") % 60),
+      paused: this.ticker.paused
+    }));
     return this;
   },
 
