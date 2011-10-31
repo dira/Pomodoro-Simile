@@ -12,47 +12,66 @@ var Pomodoro = Backbone.Model.extend({
     workLength: 25*60, // in seconds
     breakLength: 5*60, // in seconds
     inBreak: false,
-    paused: true
   },
 
   initialize: function() {
     this.reset();
   },
 
-  reset: function() {
-    this.set({seconds: this.get("workLength"), paused: true, inBreak: false});
+  reset: function(period) {
+    if (period == 'break') {
+      this.set({seconds: this.get("breakLength"), inBreak: true});
+    } else {
+      this.set({seconds: this.get("workLength"),  inBreak: false});
+    }
   },
 
-  start: function() {
-    this.set({paused: false});
-    _.delay(_.bind(this.tick, this), 1000);
-  },
+  decrease: function() {
+    var secondsLeft = this.get('seconds') - 1;
 
-  pause: function() {
-    this.set({paused: true});
-  },
-
-  tick: function() {
-    if (this.get("paused"))
-      return;
-
-    var secondsLeft = this.get("seconds")-1;
-    this.set({seconds: secondsLeft})
-
-      if (secondsLeft <= 0) {
-        if (this.get("inBreak")) {
-          this.reset();
-          this.trigger("done:break");
-        } else {
-          this.set({seconds: this.get("breakLength"), inBreak: true});
-          this.trigger("done:work");
-          this.start();
-        }
+    if (secondsLeft <= 0) {
+      if (this.get("inBreak")) {
+        this.reset('work');
+        this.trigger("done:break");
+        return false;
       } else {
-        this.start();
+        this.reset('break');
+        this.trigger("done:work");
+        return true;
       }
+    } else {
+      this.set({seconds: secondsLeft})
+      return true;
+    }
   }
 });
+
+var Ticker = function(pomodoro) {
+  this.start = function() {
+    this.paused = false;
+    _.delay(_.bind(this.tick, this), 1000);
+  }
+
+  this.pause = function() {
+    this.paused = true;
+  }
+
+  this.tick = function() {
+    if (this.paused) {
+      return;
+    }
+
+    if (pomodoro.decrease()) {
+      this.start();
+    }
+  }
+
+  this.switch = function() {
+    this.paused ?  this.start() : this.pause();
+  }
+
+  this.pause();
+}
 
 /**
  * Display the current time left in the #counter
@@ -68,6 +87,7 @@ var PomodoroCounterView = Backbone.View.extend({
     if (!this.model) {
       throw "Cannot make a view without a model!";
     }
+    this.ticker = new Ticker(this.model);
 
     this.template = _.template($("#counter-template").html())
 
@@ -82,17 +102,14 @@ var PomodoroCounterView = Backbone.View.extend({
 
     $(this.el).html(this.template({
       formattedTime: minutes + ":" + ((seconds < 10) ? "0" : "") + seconds,
-      clickAction: (this.model.get("paused") ? "resume" : "pause")
+      clickAction: (this.ticker.paused ? "resume" : "pause")
     }))
     return this;
   },
 
   toggle: function() {
-    if (this.model.get("paused")) {
-      this.model.start();
-    } else {
-      this.model.pause();
-    }
+    this.ticker.switch();
+    this.render();
   },
 
   toggleBreak: function() {
